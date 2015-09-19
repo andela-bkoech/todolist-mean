@@ -2,18 +2,41 @@ var express = require('express');
 var morgan = require('morgan');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
+var config = require('./config');
 
-var http = require('http');
-var fs = require('fs');
-var config = JSON.parse(fs.readFileSync('config.json'));
-var port = config.port;
-var host = config.host;
+var app = express();
 
-var server = http.createServer(function(req, res) {
-	res.writeHead(200, {"Content-Type" : "text/plain"});
-	res.end(config.Author);
-}); 
+// connect to Mongodb using mongosoe
+mongoose.connect(config.database, function(err) {
+	if(err) {
+		console.log("NOT CONNECTED TO DB " + err);
+	} 
+	else {
+		console.log("connected to db");
+	}
+});
+// use the dependencies
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(morgan('dev'));
 
-server.listen(port, host, function() {
-	console.log("Listening to port 3000 .....");
+// renders public files
+app.use(express.static(__dirname + 'public'));
+
+//call api && use it
+var api = require('./app/routes/api')(app, express);
+app.use('/api', api);
+
+app.get('*', function(req, res) {
+	res.sendFile(__dirname + '/public/views/index.html');
+});
+
+// connect to server
+app.listen(config.port, function(err) {
+	if(err) {
+		console.log(err);
+	}
+	else {
+		console.log('Listening on port ' + config.port);
+	}
 });
